@@ -556,3 +556,26 @@ SELECT
     COUNT(*) AS total_rows,
     COUNT(DISTINCT `Customer_ID`) AS distinct_customers
 FROM `delinquency_prediction_dataset`;
+
+SELECT * 
+FROM
+delinquency_prediction_dataset;
+
+SELECT Age
+FROM delinquency_prediction_dataset;
+
+SELECT AVG(Age) AS Average_age
+FROM delinquency_prediction_dataset;
+
+-- SELECT AVG(Age)
+-- FROM delinquency_prediction_dataset
+-- GROUP BY Age;
+
+SELECT Employment_Status
+FROM
+delinquency_prediction_dataset;
+
+SELECT DISTINCT Employment_Status
+FROM
+delinquency_prediction_dataset;
+
