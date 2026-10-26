@@ -579,3 +579,412 @@ SELECT DISTINCT Employment_Status
 FROM
 delinquency_prediction_dataset;
 
+SELECT 
+    (SELECT COUNT(*) 
+     FROM `delinquency_prediction_dataset`) AS `total_rows`,
+    (SELECT COUNT(*) 
+     FROM `INFORMATION_SCHEMA`.`COLUMNS` 
+     WHERE `TABLE_SCHEMA` = DATABASE() 
+       AND `TABLE_NAME` = 'delinquency_prediction_dataset') AS `total_columns`;
+
+-- PRINT COLUMN NAMES 
+-- Single Python-style JSON Array list of column names:
+SELECT 
+    JSON_ARRAYAGG(`COLUMN_NAME`) AS `The_columns_names_are`
+FROM (
+    SELECT `COLUMN_NAME`
+    FROM `INFORMATION_SCHEMA`.`COLUMNS`
+    WHERE `TABLE_SCHEMA` = DATABASE()
+      AND `TABLE_NAME` = 'delinquency_prediction_dataset'
+    ORDER BY `ORDINAL_POSITION`
+) AS `ordered_cols`;
+
+--  Tabular list of column names with their ordinal index (0-based like Pandas):
+SELECT 
+    (`ORDINAL_POSITION` - 1) AS `Pandas_Index`,
+    `COLUMN_NAME` AS `Column_Name`
+FROM `INFORMATION_SCHEMA`.`COLUMNS`
+WHERE `TABLE_SCHEMA` = DATABASE()
+  AND `TABLE_NAME` = 'delinquency_prediction_dataset'
+ORDER BY `ORDINAL_POSITION`;
+
+-- CHECK DATA TYPES, NON-NULL COUNTS & MEMORY USAGE 
+-- Quick schema inspection:
+DESCRIBE `delinquency_prediction_dataset`;
+
+--  Full summary table (Index, Column, Non-Null Count, Nullability, Dtype):
+WITH `non_null_counts` AS (
+    SELECT 'Customer_ID' AS `col`, COUNT(`Customer_ID`) AS `non_null_cnt` FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Age', COUNT(`Age`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Income', COUNT(`Income`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Credit_Score', COUNT(`Credit_Score`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Credit_Utilization', COUNT(`Credit_Utilization`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Missed_Payments', COUNT(`Missed_Payments`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Delinquent_Account', COUNT(`Delinquent_Account`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Loan_Balance', COUNT(`Loan_Balance`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Debt_to_Income_Ratio', COUNT(`Debt_to_Income_Ratio`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Employment_Status', COUNT(`Employment_Status`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Account_Tenure', COUNT(`Account_Tenure`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Credit_Card_Type', COUNT(`Credit_Card_Type`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Location', COUNT(`Location`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_1', COUNT(`Month_1`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_2', COUNT(`Month_2`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_3', COUNT(`Month_3`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_4', COUNT(`Month_4`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_5', COUNT(`Month_5`) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 'Month_6', COUNT(`Month_6`) FROM `delinquency_prediction_dataset`
+)
+SELECT 
+    (c.`ORDINAL_POSITION` - 1) AS `#`,
+    c.`COLUMN_NAME` AS `Column`,
+    CONCAT(n.`non_null_cnt`, ' non-null') AS `Non-Null Count`,
+    c.`IS_NULLABLE` AS `Nullable_In_Schema`,
+    c.`COLUMN_TYPE` AS `Dtype`
+FROM `INFORMATION_SCHEMA`.`COLUMNS` c
+JOIN `non_null_counts` n 
+  ON c.`COLUMN_NAME` = n.`col`
+WHERE c.`TABLE_SCHEMA` = DATABASE()
+  AND c.`TABLE_NAME` = 'delinquency_prediction_dataset'
+ORDER BY c.`ORDINAL_POSITION`;
+
+-- 5C. Memory Usage Summary (bottom line of `df.info()`):
+SELECT 
+    `TABLE_NAME`,
+    `TABLE_ROWS` AS `Estimated_Rows`,
+    ROUND((`DATA_LENGTH` + `INDEX_LENGTH`) / 1024, 2) AS `Memory_Usage_KB`
+FROM `INFORMATION_SCHEMA`.`TABLES`
+WHERE `TABLE_SCHEMA` = DATABASE()
+  AND `TABLE_NAME` = 'delinquency_prediction_dataset';
+
+
+-- ============================================================================
+-- STEP 6: FUNCTION: NULL AND NON-NULL VALUE ANALYSIS PER COLUMN (null_summary)
+-- Python Equivalent:
+--   def null_analysis(series): ...
+--   null_summary = df.apply(null_analysis).T
+--    null_summary.columns = ["null_count", "null_percentage", "non_null_count", "non_null_percentage"]
+--   display(null_summary)
+-- ============================================================================
+-- We create a reusable SQL View `v_null_summary` that acts just like the 
+-- transposed `null_summary` DataFrame in Python.
+
+CREATE OR REPLACE VIEW `v_null_summary` AS
+SELECT 
+    `col_order`,
+    `column_name`,
+    `null_count`,
+    ROUND(IF(`total_len` > 0, (`null_count` / `total_len`) * 100, 0), 2) AS `null_percentage`,
+    `non_null_count`,
+    ROUND(IF(`total_len` > 0, (`non_null_count` / `total_len`) * 100, 0), 2) AS `non_null_percentage`
+FROM (
+    SELECT 1 AS `col_order`, 'Customer_ID' AS `column_name`, SUM(`Customer_ID` IS NULL) AS `null_count`, COUNT(`Customer_ID`) AS `non_null_count`, COUNT(*) AS `total_len` FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 2, 'Age', SUM(`Age` IS NULL), COUNT(`Age`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 3, 'Income', SUM(`Income` IS NULL), COUNT(`Income`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 4, 'Credit_Score', SUM(`Credit_Score` IS NULL), COUNT(`Credit_Score`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 5, 'Credit_Utilization', SUM(`Credit_Utilization` IS NULL), COUNT(`Credit_Utilization`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 6, 'Missed_Payments', SUM(`Missed_Payments` IS NULL), COUNT(`Missed_Payments`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 7, 'Delinquent_Account', SUM(`Delinquent_Account` IS NULL), COUNT(`Delinquent_Account`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 8, 'Loan_Balance', SUM(`Loan_Balance` IS NULL), COUNT(`Loan_Balance`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 9, 'Debt_to_Income_Ratio', SUM(`Debt_to_Income_Ratio` IS NULL), COUNT(`Debt_to_Income_Ratio`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 10, 'Employment_Status', SUM(`Employment_Status` IS NULL), COUNT(`Employment_Status`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 11, 'Account_Tenure', SUM(`Account_Tenure` IS NULL), COUNT(`Account_Tenure`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 12, 'Credit_Card_Type', SUM(`Credit_Card_Type` IS NULL), COUNT(`Credit_Card_Type`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 13, 'Location', SUM(`Location` IS NULL), COUNT(`Location`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 14, 'Month_1', SUM(`Month_1` IS NULL), COUNT(`Month_1`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 15, 'Month_2', SUM(`Month_2` IS NULL), COUNT(`Month_2`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 16, 'Month_3', SUM(`Month_3` IS NULL), COUNT(`Month_3`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 17, 'Month_4', SUM(`Month_4` IS NULL), COUNT(`Month_4`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 18, 'Month_5', SUM(`Month_5` IS NULL), COUNT(`Month_5`), COUNT(*) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 19, 'Month_6', SUM(`Month_6` IS NULL), COUNT(`Month_6`), COUNT(*) FROM `delinquency_prediction_dataset`
+) AS `raw_counts`;
+
+-- Display `null_summary` (equivalent to `display(null_summary)`):
+SELECT 
+    `column_name`,
+    `null_count`,
+    `null_percentage`,
+    `non_null_count`,
+    `non_null_percentage`
+FROM `v_null_summary`
+ORDER BY `col_order`;
+
+--  TOTAL NULL CELLS AND PERCENTAGE ACROSS ENTIRE DATASET
+
+SELECT 
+    SUM(`null_count`) AS `total_nulls`,
+    SUM(`null_count` + `non_null_count`) AS `df_size_total_cells`,
+    ROUND((SUM(`null_count`) / SUM(`null_count` + `non_null_count`)) * 100, 4) AS `total_nulls_percentage`
+FROM `v_null_summary`;
+
+
+--  VIEW TOP 100 AND BOTTOM 100 OF `Employment_Status`
+SELECT 
+    `Customer_ID`,
+    `Employment_Status`
+FROM `delinquency_prediction_dataset`
+ORDER BY `Customer_ID` ASC
+LIMIT 100;
+
+SELECT 
+    `Customer_ID`,
+    `Employment_Status`
+FROM (
+    SELECT 
+        `Customer_ID`,
+        `Employment_Status`
+    FROM `delinquency_prediction_dataset`
+    ORDER BY `Customer_ID` DESC
+    LIMIT 100
+) AS `bottom_100_subquery`
+ORDER BY `Customer_ID` ASC;
+
+-- TOP 100, MIDDLE 100, AND BOTTOM 100
+
+-- 10A. Set-Based Query: View Top 100, Middle 100, and Bottom 100 across the dataset
+-- Using `ROW_NUMBER()` and `COUNT(*) OVER()` to dynamically compute `middle_start`.
+WITH `indexed_df` AS (
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY `Customer_ID` ASC) - 1 AS `zero_based_idx`,
+        COUNT(*) OVER () AS `total_len`,
+        `d`.*
+    FROM `delinquency_prediction_dataset` `d`
+),
+`bounds` AS (
+    SELECT 
+        *,
+        GREATEST(0, FLOOR(`total_len` / 2) - 50) AS `middle_start`
+    FROM `indexed_df`
+)
+SELECT 
+    CASE 
+        WHEN `zero_based_idx` < 100 THEN '1. TOP 100 VALUES'
+        WHEN `zero_based_idx` >= `middle_start` AND `zero_based_idx` < (`middle_start` + 100) THEN '2. MIDDLE 100 VALUES'
+        WHEN `zero_based_idx` >= (`total_len` - 100) THEN '3. BOTTOM 100 VALUES'
+    END AS `Slice_Section`,
+    `zero_based_idx` AS `Row_Index`,
+    `Customer_ID`, `Age`, `Income`, `Credit_Score`, `Credit_Utilization`,
+    `Missed_Payments`, `Delinquent_Account`, `Loan_Balance`, `Debt_to_Income_Ratio`,
+    `Employment_Status`, `Account_Tenure`, `Credit_Card_Type`, `Location`,
+    `Month_1`, `Month_2`, `Month_3`, `Month_4`, `Month_5`, `Month_6`
+FROM `bounds`
+WHERE `zero_based_idx` < 100
+   OR (`zero_based_idx` >= `middle_start` AND `zero_based_idx` < (`middle_start` + 100))
+   OR `zero_based_idx` >= (`total_len` - 100)
+ORDER BY `Slice_Section`, `zero_based_idx`;
+
+-- 10B. Procedural Equivalent: Stored Procedure `sp_view_100(col_name)`
+-- Replicates `view_100(df[column])` for any specific column name.
+DROP PROCEDURE IF EXISTS `sp_view_100`;
+DELIMITER $$
+CREATE PROCEDURE `sp_view_100`(IN `p_col_name` VARCHAR(64))
+BEGIN
+    DECLARE `v_total_rows` INT DEFAULT 0;
+    DECLARE `v_middle_start` INT DEFAULT 0;
+
+    -- Get len(series)
+    SELECT COUNT(*) INTO `v_total_rows` FROM `delinquency_prediction_dataset`;
+
+    -- Calculate middle_start = max(0, (len(series) // 2) - 50)
+    SET `v_middle_start` = GREATEST(0, FLOOR(`v_total_rows` / 2) - 50);
+
+    -- Combined output of TOP 100, MIDDLE 100, and BOTTOM 100 for the single column
+    SET @sql_view_100 = CONCAT(
+        'WITH numbered AS ( ',
+        '    SELECT ROW_NUMBER() OVER (ORDER BY `Customer_ID` ASC) - 1 AS `idx`, ',
+        '           `Customer_ID`, `', `p_col_name`, '` AS `col_value` ',
+        '    FROM `delinquency_prediction_dataset` ',
+        ') ',
+        'SELECT ''', `p_col_name`, ''' AS `COLUMN_NAME`, ''TOP 100 VALUES'' AS `SECTION`, `idx`, `Customer_ID`, `col_value` ',
+        'FROM numbered WHERE `idx` < 100 ',
+        'UNION ALL ',
+        'SELECT ''', `p_col_name`, ''' AS `COLUMN_NAME`, ''MIDDLE 100 VALUES'' AS `SECTION`, `idx`, `Customer_ID`, `col_value` ',
+        'FROM numbered WHERE `idx` >= ', `v_middle_start`, ' AND `idx` < ', (`v_middle_start` + 100), ' ',
+        'UNION ALL ',
+        'SELECT ''', `p_col_name`, ''' AS `COLUMN_NAME`, ''BOTTOM 100 VALUES'' AS `SECTION`, `idx`, `Customer_ID`, `col_value` ',
+        'FROM numbered WHERE `idx` >= ', GREATEST(0, `v_total_rows` - 100), ' ',
+        'ORDER BY FIELD(`SECTION`, ''TOP 100 VALUES'', ''MIDDLE 100 VALUES'', ''BOTTOM 100 VALUES''), `idx`;'
+    );
+
+    PREPARE stmt FROM @sql_view_100;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END$$
+DELIMITER ;
+
+-- Example call for one column (or call in a loop):
+CALL `sp_view_100`('Employment_Status');
+
+-- STEP 11: UNIQUE VALUES COUNT 
+SELECT 
+    COUNT(DISTINCT CAST(`Employment_Status` AS BINARY)) AS `nunique_Case_Sensitive_Exact_Python_Match`,
+    COUNT(DISTINCT `Employment_Status`) AS `nunique_Case_Insensitive_MySQL_Default`
+FROM `delinquency_prediction_dataset`;
+
+SELECT 
+    JSON_ARRAYAGG(`unique_val`) AS `Employment_Status_Unique_Array_Python_Match`
+FROM (
+    SELECT DISTINCT 
+        CAST(`Employment_Status` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin AS `unique_val`
+    FROM `delinquency_prediction_dataset`
+) AS `u`;
+
+
+SELECT DISTINCT 
+    CAST(`Employment_Status` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin AS `Unique_Employment_Status`
+FROM `delinquency_prediction_dataset`;
+
+-- STEP 12: UNIQUE VALUES AND THEIR COUNTS FOR ALL COLUMNS 
+SELECT 'Customer_ID' AS `Column_Name`, COUNT(DISTINCT CAST(`Customer_ID` AS BINARY)) AS `No_count_of_unique_values` FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Age', COUNT(DISTINCT `Age`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Income', COUNT(DISTINCT `Income`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Credit_Score', COUNT(DISTINCT `Credit_Score`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Credit_Utilization', COUNT(DISTINCT `Credit_Utilization`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Missed_Payments', COUNT(DISTINCT `Missed_Payments`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Delinquent_Account', COUNT(DISTINCT `Delinquent_Account`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Loan_Balance', COUNT(DISTINCT `Loan_Balance`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Debt_to_Income_Ratio', COUNT(DISTINCT `Debt_to_Income_Ratio`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Employment_Status', COUNT(DISTINCT CAST(`Employment_Status` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Account_Tenure', COUNT(DISTINCT `Account_Tenure`) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Credit_Card_Type', COUNT(DISTINCT CAST(`Credit_Card_Type` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Location', COUNT(DISTINCT CAST(`Location` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_1', COUNT(DISTINCT CAST(`Month_1` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_2', COUNT(DISTINCT CAST(`Month_2` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_3', COUNT(DISTINCT CAST(`Month_3` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_4', COUNT(DISTINCT CAST(`Month_4` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_5', COUNT(DISTINCT CAST(`Month_5` AS BINARY)) FROM `delinquency_prediction_dataset` UNION ALL
+SELECT 'Month_6', COUNT(DISTINCT CAST(`Month_6` AS BINARY)) FROM `delinquency_prediction_dataset`;
+
+SELECT `Column_Name`, `Unique_Value`, `Value_Count`
+FROM (
+    SELECT 1 AS `ord`, 'Employment_Status' AS `Column_Name`, CAST(`Employment_Status` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin AS `Unique_Value`, COUNT(*) AS `Value_Count`
+    FROM `delinquency_prediction_dataset` WHERE `Employment_Status` IS NOT NULL GROUP BY CAST(`Employment_Status` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 2, 'Credit_Card_Type', CAST(`Credit_Card_Type` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Credit_Card_Type` IS NOT NULL GROUP BY CAST(`Credit_Card_Type` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 3, 'Location', CAST(`Location` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Location` IS NOT NULL GROUP BY CAST(`Location` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 4, 'Delinquent_Account', CAST(`Delinquent_Account` AS CHAR), COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Delinquent_Account` IS NOT NULL GROUP BY `Delinquent_Account`
+    UNION ALL
+    SELECT 5, 'Missed_Payments', CAST(`Missed_Payments` AS CHAR), COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Missed_Payments` IS NOT NULL GROUP BY `Missed_Payments`
+    UNION ALL
+    SELECT 6, 'Account_Tenure', CAST(`Account_Tenure` AS CHAR), COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Account_Tenure` IS NOT NULL GROUP BY `Account_Tenure`
+    UNION ALL
+    SELECT 7, 'Month_1', CAST(`Month_1` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_1` IS NOT NULL GROUP BY CAST(`Month_1` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 8, 'Month_2', CAST(`Month_2` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_2` IS NOT NULL GROUP BY CAST(`Month_2` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 9, 'Month_3', CAST(`Month_3` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_3` IS NOT NULL GROUP BY CAST(`Month_3` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 10, 'Month_4', CAST(`Month_4` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_4` IS NOT NULL GROUP BY CAST(`Month_4` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 11, 'Month_5', CAST(`Month_5` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_5` IS NOT NULL GROUP BY CAST(`Month_5` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+    UNION ALL
+    SELECT 12, 'Month_6', CAST(`Month_6` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin, COUNT(*)
+    FROM `delinquency_prediction_dataset` WHERE `Month_6` IS NOT NULL GROUP BY CAST(`Month_6` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin
+) AS `vc`
+ORDER BY `ord`, `Value_Count` DESC;
+
+DROP PROCEDURE IF EXISTS `sp_unique_value_count`;
+DELIMITER $$
+CREATE PROCEDURE `sp_unique_value_count`(IN `p_col_name` VARCHAR(64))
+BEGIN
+    -- Print  (excluding NULLs, sorted descending by count)
+    SET @sql_vc = CONCAT(
+        'SELECT ''', `p_col_name`, ''' AS `Column_Name`, ',
+        '       CAST(`', `p_col_name`, '` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin AS `Unique_Value`, ',
+        '       COUNT(*) AS `Count` ',
+        'FROM `delinquency_prediction_dataset` ',
+        'WHERE `', `p_col_name`, '` IS NOT NULL ',
+        'GROUP BY CAST(`', `p_col_name`, '` AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin ',
+        'ORDER BY `Count` DESC, `Unique_Value` ASC;'
+    );
+    PREPARE stmt1 FROM @sql_vc;
+    EXECUTE stmt1;
+    DEALLOCATE PREPARE stmt1;
+
+    SET @sql_nu = CONCAT(
+        'SELECT ''', `p_col_name`, ''' AS `Column_Name`, ',
+        '       COUNT(DISTINCT CAST(`', `p_col_name`, '` AS BINARY)) AS `No_count_of_unique_values` ',
+        'FROM `delinquency_prediction_dataset`;'
+    );
+    PREPARE stmt2 FROM @sql_nu;
+    EXECUTE stmt2;
+    DEALLOCATE PREPARE stmt2;
+END$$
+DELIMITER ;
+
+CALL `sp_unique_value_count`('Employment_Status');
+
+
+--  DUPLICATED COUNT AND PERCENTAGE 
+WITH `row_dup_check` AS (
+    SELECT 
+        `Customer_ID`,
+        ROW_NUMBER() OVER (
+            PARTITION BY 
+                `Customer_ID`, `Age`, `Income`, `Credit_Score`, `Credit_Utilization`,
+                `Missed_Payments`, `Delinquent_Account`, `Loan_Balance`, `Debt_to_Income_Ratio`,
+                CAST(`Employment_Status` AS BINARY), `Account_Tenure`, 
+                CAST(`Credit_Card_Type` AS BINARY), CAST(`Location` AS BINARY),
+                CAST(`Month_1` AS BINARY), CAST(`Month_2` AS BINARY), CAST(`Month_3` AS BINARY),
+                CAST(`Month_4` AS BINARY), CAST(`Month_5` AS BINARY), CAST(`Month_6` AS BINARY)
+            ORDER BY `Customer_ID`
+        ) AS `exact_row_num`,
+        ROW_NUMBER() OVER (
+            PARTITION BY 
+                `Age`, `Income`, `Credit_Score`, `Credit_Utilization`,
+                `Missed_Payments`, `Delinquent_Account`, `Loan_Balance`, `Debt_to_Income_Ratio`,
+                CAST(`Employment_Status` AS BINARY), `Account_Tenure`, 
+                CAST(`Credit_Card_Type` AS BINARY), CAST(`Location` AS BINARY),
+                CAST(`Month_1` AS BINARY), CAST(`Month_2` AS BINARY), CAST(`Month_3` AS BINARY),
+                CAST(`Month_4` AS BINARY), CAST(`Month_5` AS BINARY), CAST(`Month_6` AS BINARY)
+            ORDER BY `Customer_ID`
+        ) AS `feature_only_row_num`
+    FROM `delinquency_prediction_dataset`
+)
+SELECT 
+    SUM(CASE WHEN `exact_row_num` > 1 THEN 1 ELSE 0 END) AS `The_exact_duplicated_count_df`,
+    ROUND((SUM(CASE WHEN `exact_row_num` > 1 THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) AS `The_percentage_of_duplicated_df`,
+    SUM(CASE WHEN `feature_only_row_num` > 1 THEN 1 ELSE 0 END) AS `Duplicated_count_excluding_Customer_ID`
+FROM `row_dup_check`;
+
+-- Per-Column Duplicate Check
+
+SELECT 
+    `Column_Name`,
+    `total_rows`,
+    `nunique_including_null`,
+    (`total_rows` - `nunique_including_null`) AS `The_exact_duplicated_count`,
+    ROUND(((`total_rows` - `nunique_including_null`) / `total_rows`) * 100, 2) AS `The_percentage_of_duplicated`
+FROM (
+    SELECT 1 AS `ord`, 'Customer_ID' AS `Column_Name`, COUNT(*) AS `total_rows`, COUNT(DISTINCT CAST(`Customer_ID` AS BINARY)) + MAX(`Customer_ID` IS NULL) AS `nunique_including_null` FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 2, 'Age', COUNT(*), COUNT(DISTINCT `Age`) + MAX(`Age` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 3, 'Income', COUNT(*), COUNT(DISTINCT `Income`) + MAX(`Income` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 4, 'Credit_Score', COUNT(*), COUNT(DISTINCT `Credit_Score`) + MAX(`Credit_Score` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 5, 'Credit_Utilization', COUNT(*), COUNT(DISTINCT `Credit_Utilization`) + MAX(`Credit_Utilization` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 6, 'Missed_Payments', COUNT(*), COUNT(DISTINCT `Missed_Payments`) + MAX(`Missed_Payments` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 7, 'Delinquent_Account', COUNT(*), COUNT(DISTINCT `Delinquent_Account`) + MAX(`Delinquent_Account` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 8, 'Loan_Balance', COUNT(*), COUNT(DISTINCT `Loan_Balance`) + MAX(`Loan_Balance` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 9, 'Debt_to_Income_Ratio', COUNT(*), COUNT(DISTINCT `Debt_to_Income_Ratio`) + MAX(`Debt_to_Income_Ratio` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 10, 'Employment_Status', COUNT(*), COUNT(DISTINCT CAST(`Employment_Status` AS BINARY)) + MAX(`Employment_Status` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 11, 'Account_Tenure', COUNT(*), COUNT(DISTINCT `Account_Tenure`) + MAX(`Account_Tenure` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 12, 'Credit_Card_Type', COUNT(*), COUNT(DISTINCT CAST(`Credit_Card_Type` AS BINARY)) + MAX(`Credit_Card_Type` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 13, 'Location', COUNT(*), COUNT(DISTINCT CAST(`Location` AS BINARY)) + MAX(`Location` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 14, 'Month_1', COUNT(*), COUNT(DISTINCT CAST(`Month_1` AS BINARY)) + MAX(`Month_1` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 15, 'Month_2', COUNT(*), COUNT(DISTINCT CAST(`Month_2` AS BINARY)) + MAX(`Month_2` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 16, 'Month_3', COUNT(*), COUNT(DISTINCT CAST(`Month_3` AS BINARY)) + MAX(`Month_3` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 17, 'Month_4', COUNT(*), COUNT(DISTINCT CAST(`Month_4` AS BINARY)) + MAX(`Month_4` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 18, 'Month_5', COUNT(*), COUNT(DISTINCT CAST(`Month_5` AS BINARY)) + MAX(`Month_5` IS NULL) FROM `delinquency_prediction_dataset` UNION ALL
+    SELECT 19, 'Month_6', COUNT(*), COUNT(DISTINCT CAST(`Month_6` AS BINARY)) + MAX(`Month_6` IS NULL) FROM `delinquency_prediction_dataset`
+) AS `col_dups`
+ORDER BY `ord`;
