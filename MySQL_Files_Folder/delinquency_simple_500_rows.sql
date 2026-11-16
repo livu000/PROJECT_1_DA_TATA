@@ -557,56 +557,200 @@ SELECT
     COUNT(DISTINCT `Customer_ID`) AS distinct_customers
 FROM `delinquency_prediction_dataset`;
 
+-- 1. EDA(Exploratary Data Analysis) for all columns DISTINCT values
+SHOW COLUMNS FROM delinquency_prediction_dataset;
+SELECT DISTINCT(Customer_ID)
+FROM delinquency_prediction_dataset;
+-- In the table Customer_ID should be unique AND count 500
+SELECT COUNT(Customer_ID)
+FROM delinquency_prediction_dataset;
+-- Check and Count NULL values in customer_id
+SELECT COUNT(*)
+FROM delinquency_prediction_dataset
+WHERE Customer_ID IS NULL;
+
+-- View distinct age AND IT'S count
+SELECT DISTINCT(Age), COUNT(Age)
+FROM delinquency_prediction_dataset
+GROUP BY Age
+ORDER BY COUNT(Age) DESC;
+-- Check and Count NULL values in Age
+SELECT COUNT(*)
+FROM delinquency_prediction_dataset
+WHERE Age IS NULL;
+-- View MIN, MAX, AVERAGE Age
+SELECT  MAX(Age), MIN(Age), AVG(Age)
+FROM delinquency_prediction_dataset;
+
+-- View distinct Income AND IT'S count
+SELECT DISTINCT(Income), COUNT(Income)
+FROM delinquency_prediction_dataset
+GROUP BY Income
+ORDER BY COUNT(Income) DESC;
+-- Check and Count NULL values in Income
+SELECT 
+(SELECT COUNT(*)
+FROM delinquency_prediction_dataset
+WHERE Income IS NULL) AS Total_null_income_count,
+(SELECT COUNT(Income)
+FROM delinquency_prediction_dataset) AS Income_NON_NULL_records_count,
+ROUND(((SELECT COUNT(*)
+FROM delinquency_prediction_dataset
+WHERE Income IS NULL) /(SELECT COUNT(*)
+FROM delinquency_prediction_dataset) * 100 ), 2) AS  Income_NULL_Percentage;
+-- Using CTE(COMMAN TABLE EXPRESSION)
+WITH Total_null_income_count AS(
+SELECT COUNT(*) AS Null_count
+FROM delinquency_prediction_dataset
+WHERE Income IS NULL),
+Total_NON_NULL_income_count AS(
+SELECT COUNT(Income) AS NON_Null_count
+FROM delinquency_prediction_dataset),
+Income_records_count AS(
+SELECT COUNT(*) AS Income_records
+FROM delinquency_prediction_dataset),
+Income_NULL_Percentage_CTE AS (
+SELECT ROUND(((Null_count/Income_records) * 100) , 2) AS Income_NULL_Percentage
+FROM Total_null_income_count
+CROSS JOIN Income_records_count
+)
+SELECT Null_count, NON_Null_count, Income_records, Income_NULL_Percentage
+FROM Total_null_income_count
+CROSS JOIN Total_NON_NULL_income_count
+CROSS JOIN Income_records_count
+CROSS JOIN Income_NULL_Percentage_CTE;
+
+-- View MIN, MAX, AVERAGE Income
+SELECT  MAX(Income), MIN(Income), ROUND(AVG(Income),2)
+FROM delinquency_prediction_dataset;
+
+-- View distinct Income AND IT'S Credit_Score
+SELECT DISTINCT(Credit_Score), COUNT(Credit_Score)
+FROM delinquency_prediction_dataset
+GROUP BY Credit_Score
+ORDER BY COUNT(Credit_Score) DESC;
+-- Check and Count NULL values in Credit_Score
+SELECT COUNT(*)
+FROM delinquency_prediction_dataset
+WHERE Credit_Score IS NULL;
+-- CREATE Same Piviot table USING SUBQUERY AND CTE FOR THE Credit_Score
+-- View MIN, MAX, AVERAGE Credit_Score
+SELECT  MAX(Credit_Score), MIN(Credit_Score), AVG(Credit_Score)
+FROM delinquency_prediction_dataset;
+
+-- For Other columns do all things 
+
+-- VIEW DISTINCT Employment_Status
+SELECT DISTINCT(Employment_Status)
+FROM delinquency_prediction_dataset;
+-- CHECK THE STANDARDIZE OUTPUT BEFORE ACTUAL CHANGE
+SELECT DISTINCT(
+       CASE 
+           WHEN LOWER(TRIM(Employment_Status)) IN ('EMP', 'employed')
+                THEN 'Employed'
+           WHEN LOWER(TRIM(Employment_Status)) IN ('retired')
+                THEN 'Retired'
+		   WHEN LOWER(TRIM(Employment_Status)) IN ('self-employed')
+                THEN 'Self-Employed'
+		   WHEN LOWER(TRIM(Employment_Status)) IN ('unemployed')
+                THEN 'Unemployed'
+		   ELSE 'x' 
+		END) AS S_Employment_Status
+FROM delinquency_prediction_dataset
+WHERE Employment_Status IS NOT NULL;
+-- AFTER PREVIOUS PERFORM ACTUAL TABLE MODIFICATION
+UPDATE delinquency_prediction_dataset
+SET Employment_Status = 
+	CASE 
+		WHEN LOWER(TRIM(Employment_Status)) IN ('EMP', 'employed')
+			THEN 'Employed'
+		WHEN LOWER(TRIM(Employment_Status)) IN ('retired')
+			THEN 'Retired'
+		WHEN LOWER(TRIM(Employment_Status)) IN ('self-employed')
+			THEN 'Self-Employed'
+		WHEN LOWER(TRIM(Employment_Status)) IN ('unemployed')
+			THEN 'Unemployed'
+		ELSE TRIM(Employment_Status) OR 'x' 
+	END
+WHERE Employment_Status IS NOT NULL;
+-- Check standardization of Employment_Status after UPDATE (Safe Done) 
+SELECT DISTINCT(Employment_Status)
+FROM delinquency_prediction_dataset;
+
+
+
+
+-- To view all Table records 
 SELECT * 
 FROM
 delinquency_prediction_dataset;
-
+-- To view Age Column Records
 SELECT Age
 FROM delinquency_prediction_dataset;
+
+SELECT DISTINCT(Age), COUNT(Age) AS Count_distinct_Age
+FROM delinquency_prediction_dataset
+GROUP BY Age
+ORDER BY Age;
+
 
 SELECT AVG(Age) AS Average_age
 FROM delinquency_prediction_dataset;
 
--- SELECT AVG(Age)
--- FROM delinquency_prediction_dataset
--- GROUP BY Age;
-
-SELECT Employment_Status
+SELECT DISTINCT(Employment_Status)
 FROM
 delinquency_prediction_dataset;
 
-SELECT DISTINCT Employment_Status
+-- To view the distinct Employment_Status as UPPPER case
+SELECT DISTINCT UPPER(Employment_Status)
 FROM
 delinquency_prediction_dataset;
 
-SELECT 
-    (SELECT COUNT(*) 
-     FROM `delinquency_prediction_dataset`) AS `total_rows`,
-    (SELECT COUNT(*) 
-     FROM `INFORMATION_SCHEMA`.`COLUMNS` 
-     WHERE `TABLE_SCHEMA` = DATABASE() 
-       AND `TABLE_NAME` = 'delinquency_prediction_dataset') AS `total_columns`;
+-- SELECT 
+--     (SELECT COUNT(*) 
+--      FROM `delinquency_prediction_dataset`) AS `total_rows`,
+--     (SELECT COUNT(*) 
+--      FROM `INFORMATION_SCHEMA`.`COLUMNS` 
+--      WHERE `TABLE_SCHEMA` = DATABASE() 
+--        AND `TABLE_NAME` = 'delinquency_prediction_dataset') AS `total_columns`;
+-- To count total rows of table 
+SELECT COUNT(*) AS Total_Rows
+FROM delinquency_prediction_dataset;
+-- To view columns name and it's related information
+SHOW COLUMNS FROM delinquency_prediction_dataset;
+--  To count the columns 
+SELECT COUNT(*)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'delinquency_prediction_dataset'
+AND TABLE_SCHEMA = DATABASE();
+-- INFORMATION_SCHEMA is a special database in MySQL.
+-- It stores metadata (information about your databases and tables).
+-- COLUMNS contains information about every column in your database tables.
 
 -- PRINT COLUMN NAMES 
 -- Single Python-style JSON Array list of column names:
-SELECT 
-    JSON_ARRAYAGG(`COLUMN_NAME`) AS `The_columns_names_are`
-FROM (
-    SELECT `COLUMN_NAME`
-    FROM `INFORMATION_SCHEMA`.`COLUMNS`
-    WHERE `TABLE_SCHEMA` = DATABASE()
-      AND `TABLE_NAME` = 'delinquency_prediction_dataset'
-    ORDER BY `ORDINAL_POSITION`
-) AS `ordered_cols`;
+-- SELECT 
+--     JSON_ARRAYAGG(`COLUMN_NAME`) AS `The_columns_names_are`
+-- FROM (
+--     SELECT `COLUMN_NAME`
+--     FROM `INFORMATION_SCHEMA`.`COLUMNS`
+--     WHERE `TABLE_SCHEMA` = DATABASE()
+--       AND `TABLE_NAME` = 'delinquency_prediction_dataset'
+--     ORDER BY `ORDINAL_POSITION`
+-- ) AS `ordered_cols`;
 
 --  Tabular list of column names with their ordinal index (0-based like Pandas):
-SELECT 
-    (`ORDINAL_POSITION` - 1) AS `Pandas_Index`,
-    `COLUMN_NAME` AS `Column_Name`
-FROM `INFORMATION_SCHEMA`.`COLUMNS`
-WHERE `TABLE_SCHEMA` = DATABASE()
-  AND `TABLE_NAME` = 'delinquency_prediction_dataset'
-ORDER BY `ORDINAL_POSITION`;
+-- SELECT 
+--     (`ORDINAL_POSITION` - 1) AS `Pandas_Index`,
+--     `COLUMN_NAME` AS `Column_Name`
+-- FROM `INFORMATION_SCHEMA`.`COLUMNS`
+-- WHERE `TABLE_SCHEMA` = DATABASE()
+--   AND `TABLE_NAME` = 'delinquency_prediction_dataset'
+-- ORDER BY `ORDINAL_POSITION`;
+
+SELECT Age,Employment_Status ,
+ROW_NUMBER() OVER( PARTITION BY Employment_Status ORDER BY Age)
+FROM delinquency_prediction_dataset;
 
 -- CHECK DATA TYPES, NON-NULL COUNTS & MEMORY USAGE 
 -- Quick schema inspection:
