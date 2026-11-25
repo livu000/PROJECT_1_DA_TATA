@@ -677,7 +677,124 @@ WHERE Employment_Status IS NOT NULL;
 SELECT DISTINCT(Employment_Status)
 FROM delinquency_prediction_dataset;
 
+-- View unique Credit_Card_Type
+SELECT COUNT(DISTINCT(Credit_Card_Type))
+FROM delinquency_prediction_dataset;
+-- View unique Credit_Card_Type And Actual count of unique Credit_Card_Type 
+SELECT DISTINCT(Credit_Card_Type), COUNT(*)
+FROM delinquency_prediction_dataset
+GROUP BY Credit_Card_Type;
+-- Check the percentage of every Credit_Card_Type
+SELECT DISTINCT(Credit_Card_Type), 
+(COUNT(*) / (SELECT COUNT(*)
+FROM delinquency_prediction_dataset) * 100) AS Percentage_CCT
+FROM delinquency_prediction_dataset
+GROUP BY Credit_Card_Type
+ORDER BY Percentage_CCT DESC;
 
+-- View unique Location
+SELECT DISTINCT(Location)
+FROM delinquency_prediction_dataset;
+SELECT COUNT(DISTINCT(Location))
+FROM delinquency_prediction_dataset;
+-- View unique Location And Actual count of unique Location 
+SELECT DISTINCT(Location), COUNT(*)
+FROM delinquency_prediction_dataset
+GROUP BY Location;
+-- Verify actual total records
+WITH TOTAL_LOCATION_COUNT AS (SELECT Location, COUNT(*) AS location_Wise_Count
+FROM delinquency_prediction_dataset
+GROUP BY Location)
+SELECT SUM(location_Wise_Count) AS Total_locations
+FROM TOTAL_LOCATION_COUNT;
+-- Check the percentage of every Location
+SELECT DISTINCT(Location), 
+(COUNT(*) / (SELECT COUNT(*)
+FROM delinquency_prediction_dataset) * 100) AS Percentage_Location
+FROM delinquency_prediction_dataset
+GROUP BY Location
+ORDER BY Percentage_Location DESC;
+-- Check the total_percentage of Location
+WITH Total_Percentage_Count AS (SELECT Location,
+(COUNT(*) / (SELECT COUNT(*)
+FROM delinquency_prediction_dataset) * 100) AS Percentage_Location
+FROM delinquency_prediction_dataset
+GROUP BY Location
+ORDER BY Percentage_Location DESC)
+SELECT SUM(Percentage_Location)
+FROM Total_Percentage_Count;
+
+-- View and count of Month 1 To 6 
+SELECT DISTINCT(Month_1), COUNT(Month_1), (COUNT(Month_1) / (SELECT COUNT(*) FROM delinquency_prediction_dataset) * 100) AS Per_MOnth_1
+FROM delinquency_prediction_dataset
+GROUP BY Month_1;
+-- TO CHECK TOTAL PERCENTAGE COUNT
+WITH CTE_1 AS (SELECT DISTINCT(Month_1) AS Unique_de_sta, 
+COUNT(Month_1) AS Total_co_de_sta, 
+(COUNT(Month_1) / (SELECT COUNT(*) FROM delinquency_prediction_dataset) * 100) AS Per_MOnth_1
+FROM delinquency_prediction_dataset
+GROUP BY Month_1)
+SELECT SUM(Per_MOnth_1)
+FROM CTE_1;
+-- Do same for the remaning Month_2_To_6
+SELECT DISTINCT(Month_2), 
+COUNT(Month_2), 
+(COUNT(Month_2) / (SELECT COUNT(*) FROM delinquency_prediction_dataset) * 100) AS Per_Month_2
+FROM delinquency_prediction_dataset
+GROUP BY Month_2;
+-- TO CHECK TOTAL PERCENTAGE COUNT
+WITH CTE_2 AS (SELECT DISTINCT(Month_2) AS Unique_de_sta, 
+COUNT(Month_2) AS Total_co_de_sta, 
+(COUNT(Month_2) / (SELECT COUNT(*) FROM delinquency_prediction_dataset) * 100) AS Per_MOnth_2
+FROM delinquency_prediction_dataset
+GROUP BY Month_2)
+SELECT SUM(Per_Month_2)
+FROM CTE_2;
+
+
+
+-- Bussiness requirements questions
+-- 1.Show the distinct Age and it's count
+SELECT Age AS Unique_Age,
+COUNT(*) AS Unique_Age_Count
+FROM delinquency_prediction_dataset
+GROUP BY Age
+ORDER BY Unique_Age_Count DESC;
+SELECT AVG(Age)
+FROM delinquency_prediction_dataset;
+-- Check the duplicate record
+SELECT Customer_ID, COUNT(*) AS Record_Count
+FROM delinquency_prediction_dataset
+GROUP BY Customer_ID
+ORDER BY Customer_ID DESC;
+-- Record > 1 For the duplication
+-- No duplicate found 
+SELECT Customer_ID, COUNT(*) AS Record_Count
+FROM delinquency_prediction_dataset
+GROUP BY Customer_ID
+HAVING Record_Count > 1
+ORDER BY Customer_ID DESC;
+-- Avearge Income(Other parameters) for Unique Age(TABLE and PIVIOT TABLE FORMAT)
+SELECT Age, COUNT(Age) AS unique_age_count,
+ROUND(AVG(Income), 2) AS avg_income,
+MIN(Income) AS Min_Income,
+MAX(Income) AS Max_Income,
+ROUND(AVG(Credit_Score), 2) AS avg_Credit_Score,
+MIN(Credit_Score) AS Min_Credit_Score,
+MAX(Credit_Score) AS Max_Credit_Score,
+ROUND(AVG(Credit_Utilization), 2) AS avg_Credit_Utilization,
+MIN(Credit_Utilization) AS Min_Credit_Utilization,
+MAX(Credit_Utilization) AS Max_Credit_Utilization
+-- YOU CAN ADD MORE DETAILS(VARIBLES) HERE 
+FROM delinquency_prediction_dataset
+GROUP BY Age
+ORDER BY avg_income;
+-- FOR THE DISTINCT Age how many Missed_Payments
+SELECT Age, SUM(Missed_Payments) AS Total_missed_payments, SUM(Delinquent_Account) AS Total_de_acc
+FROM delinquency_prediction_dataset
+GROUP BY Age
+ORDER BY Total_missed_payments DESC;
+-- 
 
 
 -- To view all Table records 
